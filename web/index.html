@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>电商经营分析 Agent</title>
+  <script src="/plotly.min.js"></script>
+  <style>
+    :root { color-scheme: light; --ink:#182329; --muted:#617079; --blue:#146c83; --line:#dce5e7; --bg:#f5f8f8; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 system-ui,"Microsoft YaHei",sans-serif; }
+    main { width:min(1000px, calc(100% - 32px)); margin:48px auto 80px; }
+    .eyebrow { color:var(--blue); font-size:13px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; }
+    h1 { font-size:clamp(30px,5vw,48px); line-height:1.15; margin:12px 0; }
+    p { margin:0 0 20px; }
+    .muted { color:var(--muted); }
+    .card { background:white; border:1px solid var(--line); border-radius:18px; padding:24px; box-shadow:0 8px 30px #1739420a; margin-top:20px; }
+    textarea { width:100%; min-height:100px; resize:vertical; border:1px solid #bfced2; border-radius:12px; padding:14px; font:inherit; outline-color:var(--blue); }
+    button { border:0; background:var(--blue); color:white; padding:11px 20px; border-radius:10px; font:inherit; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.55; cursor:wait; }
+    .samples { display:flex; flex-wrap:wrap; gap:8px; margin:15px 0; }
+    .samples button { background:#e8f3f5; color:var(--blue); font-size:13px; padding:7px 11px; font-weight:600; }
+    .row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    #status { color:var(--muted); font-size:14px; }
+    #answer { white-space:pre-wrap; font-size:17px; }
+    .hidden { display:none; }
+    .table-wrap { overflow-x:auto; }
+    table { border-collapse:collapse; width:100%; font-size:14px; }
+    th,td { border-bottom:1px solid var(--line); padding:9px 12px; text-align:left; white-space:nowrap; }
+    th { background:#f4f8f8; }
+    details { border-top:1px solid var(--line); padding-top:12px; margin-top:16px; }
+    summary { cursor:pointer; font-weight:700; }
+    pre { white-space:pre-wrap; word-break:break-word; background:#f4f7f8; padding:16px; border-radius:10px; font-size:13px; }
+    .tag { display:inline-block; padding:4px 9px; border-radius:999px; background:#e8f3f5; color:var(--blue); font-size:12px; font-weight:700; }
+    @media(max-width:600px) { main{margin-top:26px}.card{padding:16px}.row{align-items:flex-start;flex-direction:column} }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Olist · 2016–2018 历史订单</div>
+  <h1>电商经营分析 Agent</h1>
+  <p class="muted">用自然语言提问，查看基于真实查询结果的分析、图表和 SQL。金额单位为巴西雷亚尔（BRL）。</p>
+  <section class="card">
+    <label for="question"><strong>你想了解什么？</strong></label>
+    <div class="samples">
+      <button type="button" data-q="2018年每个月的销售额和订单数是多少？">月度销售趋势</button>
+      <button type="button" data-q="2018年销售额最高的前10个商品类目是什么？">热销商品类目</button>
+      <button type="button" data-q="哪些州的配送延期率最高？请只看至少100个已送达订单的州。">配送延期</button>
+      <button type="button" data-q="这个数据集能计算广告投放转化率吗？">数据边界</button>
+    </div>
+    <textarea id="question" maxlength="1000" placeholder="例如：2018年哪些商品类目的销售额最高？"></textarea>
+    <div class="row"><button id="submit" type="button">开始分析</button><span id="status">检查本地服务中…</span></div>
+  </section>
+  <section id="result" class="card hidden" aria-live="polite">
+    <span id="resultTag" class="tag">分析结果</span>
+    <h2>结论</h2>
+    <div id="answer"></div>
+    <div id="chart" style="height:420px" class="hidden"></div>
+    <div id="queries"></div>
+  </section>
+  <p class="muted" style="font-size:13px;margin-top:22px">口径：销售额仅统计已送达订单的商品价格，不含运费。公开数据缺少访问、曝光、广告花费和利润，相关指标无法计算。</p>
+</main>
+<script>
+const question = document.getElementById('question');
+const submit = document.getElementById('submit');
+const status = document.getElementById('status');
+const result = document.getElementById('result');
+const history = [];
+const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.querySelectorAll('[data-q]').forEach(button => button.onclick = () => { question.value = button.dataset.q; question.focus(); });
+fetch('/health').then(r => r.json()).then(x => { status.textContent = x.database_ready ? '数据已就绪' : '请先运行数据准备脚本'; }).catch(() => { status.textContent = '无法连接本地服务'; });
+submit.onclick = async () => {
+  const q = question.value.trim();
+  if (q.length < 3) { status.textContent = '请填写至少 3 个字符的问题'; return; }
+  submit.disabled = true; status.textContent = '正在查询和分析…'; result.classList.add('hidden');
+  try {
+    const response = await fetch('/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, history:history.slice(-4)})});
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.detail || '分析失败');
+    document.getElementById('resultTag').textContent = body.status === 'unsupported' ? '数据不足' : '分析结果';
+    document.getElementById('answer').textContent = body.answer;
+    const chart = document.getElementById('chart'); chart.classList.add('hidden'); chart.innerHTML = '';
+    if (body.chart && window.Plotly) {
+      chart.classList.remove('hidden');
+      const c = body.chart;
+      Plotly.newPlot(chart, [{x:c.x,y:c.y,type:c.type,marker:{color:'#146c83'}}], {margin:{t:24,r:20,b:90,l:65},paper_bgcolor:'white',plot_bgcolor:'white',xaxis:{title:c.x_label,automargin:true},yaxis:{title:c.y_label,automargin:true}}, {responsive:true,displayModeBar:false});
+    }
+    document.getElementById('queries').innerHTML = (body.queries || []).map((item,i) => `
+      <details><summary>查询${i+1} · ${item.row_count} 行 · 查看结果和 SQL</summary>
+        <div class="table-wrap"><table><thead><tr>${item.columns.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+        <tbody>${item.rows.slice(0,30).map(row=>`<tr>${row.map(v=>`<td>${escapeHtml(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        <pre>${escapeHtml(item.sql)}</pre>
+      </details>`).join('');
+    result.classList.remove('hidden'); status.textContent = '分析完成';
+    history.push({role:'user',content:q},{role:'assistant',content:body.answer});
+    if (history.length > 4) history.splice(0, history.length - 4);
+  } catch (error) { status.textContent = error.message; }
+  finally { submit.disabled = false; }
+};
+</script>
+</body>
+</html>

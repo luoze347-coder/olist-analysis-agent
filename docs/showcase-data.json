@@ -1,0 +1,63 @@
+{
+  "dataset": "Brazilian E-Commerce Public Dataset by Olist",
+  "orders": 99441,
+  "order_lines": 112650,
+  "currency": "BRL",
+  "monthly_revenue_2018": [
+    {
+      "month": "2018-01",
+      "revenue": 924645.0
+    },
+    {
+      "month": "2018-02",
+      "revenue": 826437.13
+    },
+    {
+      "month": "2018-03",
+      "revenue": 953356.25
+    },
+    {
+      "month": "2018-04",
+      "revenue": 973534.09
+    },
+    {
+      "month": "2018-05",
+      "revenue": 977544.69
+    },
+    {
+      "month": "2018-06",
+      "revenue": 856077.86
+    },
+    {
+      "month": "2018-07",
+      "revenue": 867953.46
+    },
+    {
+      "month": "2018-08",
+      "revenue": 838576.64
+    }
+  ],
+  "top_categories_2018": [
+    {
+      "product_category": "health_beauty",
+      "revenue": 755724.5
+    },
+    {
+      "product_category": "watches_gifts",
+      "revenue": 687855.2
+    },
+    {
+      "product_category": "bed_bath_table",
+      "revenue": 532358.85
+    },
+    {
+      "product_category": "sports_leisure",
+      "revenue": 517166.26
+    },
+    {
+      "product_category": "computers_accessories",
+      "revenue": 496269.3
+    }
+  ],
+  "metric_note": "已送达订单的商品价格合计，不含运费；按购买月份统计。2018 年仅覆盖数据集中实际有记录的月份。"
+}

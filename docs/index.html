@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>电商经营分析 Agent · 项目展示</title>
+  <style>
+    :root { --ink:#183039; --muted:#59727a; --teal:#116a72; --mint:#d7f0e9; --paper:#f6f9f7; --line:#dce7e4; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.65 system-ui,"Microsoft YaHei",sans-serif; }
+    .wrap { width:min(1100px,calc(100% - 36px)); margin:auto; }
+    header { padding:18px 0; border-bottom:1px solid var(--line); }
+    .top { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .brand { font-size:15px; font-weight:800; letter-spacing:.03em; }
+    .pill { display:inline-block; border:1px solid #a6d2c9; color:var(--teal); border-radius:99px; padding:5px 11px; font-size:12px; font-weight:700; }
+    .hero { padding:72px 0 58px; display:grid; grid-template-columns:1.2fr .8fr; gap:48px; align-items:center; }
+    .eyebrow { color:var(--teal); font-size:13px; font-weight:800; letter-spacing:.14em; }
+    h1 { font-size:clamp(36px,5vw,62px); line-height:1.12; letter-spacing:-.035em; margin:18px 0; }
+    h2 { font-size:28px; margin:0 0 18px; line-height:1.25; }
+    h3 { margin:0 0 8px; font-size:17px; }
+    p { margin:0 0 16px; }
+    .lead { font-size:19px; color:var(--muted); max-width:640px; }
+    .card { background:white; border:1px solid var(--line); border-radius:20px; padding:26px; box-shadow:0 15px 50px #1840340a; }
+    .mock-question { background:#e7f5f0; color:#165957; padding:14px 16px; border-radius:12px; margin-bottom:20px; font-weight:650; }
+    .mock-step { padding:12px 0; border-top:1px solid var(--line); display:flex; gap:14px; }
+    .num { color:var(--teal); font-weight:900; }
+    section { padding:52px 0; }
+    .sub { color:var(--muted); max-width:760px; }
+    .stats,.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .stat strong { display:block; font-size:31px; line-height:1.1; margin:5px 0; }
+    .stat span { color:var(--muted); font-size:14px; }
+    .grid .card { box-shadow:none; }
+    .chart { margin-top:20px; }
+    .bar-row { display:grid; grid-template-columns:72px 1fr 115px; align-items:center; gap:12px; margin:12px 0; font-size:14px; }
+    .track { background:#e9f1ed; border-radius:99px; height:12px; overflow:hidden; }
+    .fill { height:100%; background:linear-gradient(90deg,#30b7a3,#116a72); border-radius:99px; }
+    .value { text-align:right; font-variant-numeric:tabular-nums; }
+    .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:22px; }
+    .node { background:white; border:1px solid var(--line); border-radius:10px; padding:12px 15px; font-size:14px; font-weight:650; }
+    .arrow { color:#7fa59d; }
+    a { color:var(--teal); font-weight:700; }
+    footer { padding:30px 0 60px; color:var(--muted); border-top:1px solid var(--line); font-size:13px; }
+    @media(max-width:760px) { .hero{grid-template-columns:1fr;padding-top:42px}.stats,.grid{grid-template-columns:1fr}.bar-row{grid-template-columns:64px 1fr 95px} }
+  </style>
+</head>
+<body>
+<header><div class="wrap top"><div class="brand">电商经营分析 Agent</div><span class="pill">Python · LangChain · DeepSeek · DuckDB</span></div></header>
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <div class="eyebrow">DATA ANALYSIS · AGENT PROJECT</div>
+      <h1>把经营问题，变成可核查的数据答案。</h1>
+      <p class="lead">输入自然语言问题，Agent 读取指标定义、调用受限 SQL 工具，再把真实查询结果整理成结论和图表。每个数字都能追溯到 SQL。</p>
+      <span class="pill">交互版在本地演示 · 此页展示已核查样例</span>
+    </div>
+    <div class="card">
+      <div class="mock-question">“2018 年每个月的销售额是多少？”</div>
+      <div class="mock-step"><span class="num">01</span><span>读取订单表结构与销售额口径</span></div>
+      <div class="mock-step"><span class="num">02</span><span>生成只读 SQL，校验后查询 DuckDB</span></div>
+      <div class="mock-step"><span class="num">03</span><span>展示月份、金额、图表与 SQL</span></div>
+      <div class="mock-step"><span class="num">04</span><span>标明数据覆盖范围，不补造缺失月份</span></div>
+    </div>
+  </div>
+  <section>
+    <div class="stats">
+      <div class="card stat"><span>真实历史订单</span><strong id="orders">—</strong><span>Olist 公开数据</span></div>
+      <div class="card stat"><span>订单商品行</span><strong id="order-lines">—</strong><span>独立分析类目与卖家</span></div>
+      <div class="card stat"><span>预设问题 SQL 结果匹配</span><strong>19/20</strong><span>缺失数据题拒答 9/10 · 安全探针 4/4</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>真实数据样例：2018 月度销售额</h2>
+    <p class="sub" id="metric-note">销售额口径和数据范围见项目文档。</p>
+    <div class="card chart" id="monthly-chart">正在载入已核查数据…</div>
+  </section>
+  <section>
+    <h2>系统如何工作</h2>
+    <p class="sub">模型负责理解问题和选择工具，程序控制调用次数与权限，查询结果及 SQL 一并呈现。</p>
+    <div class="flow"><span class="node">自然语言问题</span><span class="arrow">→</span><span class="node">LangChain 工具调用</span><span class="arrow">→</span><span class="node">SQLGlot 校验</span><span class="arrow">→</span><span class="node">DuckDB 只读查询</span><span class="arrow">→</span><span class="node">可复核的回答</span></div>
+  </section>
+  <section>
+    <h2>工程设计重点</h2>
+    <div class="grid">
+      <div class="card"><h3>统一指标口径</h3><p>销售额只计已送达订单的商品价格；订单表和订单行表分开，避免连接后重复计数。</p></div>
+      <div class="card"><h3>受限工具执行</h3><p>只接受指定表的单条 SELECT，限制结果行数，并在数据库层禁用写入及外部文件访问。</p></div>
+      <div class="card"><h3>知道何时拒答</h3><p>没有访问、广告花费、成本和退款数据时，不编造转化率、ROI、利润或净收入。</p></div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">数据来源：<a href="https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce">Brazilian E-Commerce Public Dataset by Olist</a>。本页图表由项目 SQL 直接导出；Agent 的完整交互在本地运行。</div></footer>
+<script>
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+fetch('./showcase-data.json').then(r => { if (!r.ok) throw Error('data unavailable'); return r.json(); }).then(d => {
+  document.getElementById('orders').textContent = d.orders.toLocaleString('en-US');
+  document.getElementById('order-lines').textContent = d.order_lines.toLocaleString('en-US');
+  document.getElementById('metric-note').textContent = d.metric_note;
+  const peak = Math.max(...d.monthly_revenue_2018.map(x => x.revenue));
+  document.getElementById('monthly-chart').innerHTML = d.monthly_revenue_2018.map(x => `<div class="bar-row"><strong>${escapeHtml(x.month)}</strong><div class="track"><div class="fill" style="width:${(x.revenue/peak*100).toFixed(1)}%"></div></div><span class="value">${Number(x.revenue).toLocaleString('en-US',{maximumFractionDigits:0})} BRL</span></div>`).join('');
+}).catch(() => { document.getElementById('monthly-chart').textContent = '请先运行 scripts/export_showcase.py 生成已核查样例数据。'; });
+</script>
+</body>
+</html>

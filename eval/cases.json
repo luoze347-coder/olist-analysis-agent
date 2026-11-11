@@ -1,0 +1,165 @@
+[
+  {
+    "id": "sales_monthly_2018",
+    "question": "2018年每个月的销售额是多少？按月份排序。",
+    "gold_sql": "SELECT strftime(purchased_at, '%Y-%m') AS month, ROUND(SUM(item_revenue), 2) AS revenue FROM orders WHERE order_status = 'delivered' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 ORDER BY 1"
+  },
+  {
+    "id": "orders_monthly_2018",
+    "question": "2018年每个月的已送达订单数是多少？",
+    "gold_sql": "SELECT strftime(purchased_at, '%Y-%m') AS month, COUNT(*) AS orders FROM orders WHERE order_status = 'delivered' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 ORDER BY 1"
+  },
+  {
+    "id": "top_categories",
+    "question": "2018年销售额最高的前10个商品类目是什么？给出销售额。",
+    "gold_sql": "SELECT product_category, ROUND(SUM(price), 2) AS revenue FROM order_items WHERE order_status = 'delivered' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 ORDER BY revenue DESC LIMIT 10"
+  },
+  {
+    "id": "top_states",
+    "question": "按客户所在州汇总，2018年销售额最高的前10个州是什么？",
+    "gold_sql": "SELECT customer_state, ROUND(SUM(item_revenue), 2) AS revenue FROM orders WHERE order_status = 'delivered' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 ORDER BY revenue DESC LIMIT 10"
+  },
+  {
+    "id": "late_states",
+    "question": "2018年哪些州的配送延期率最高？只看已送达且至少100单的州，列前10。",
+    "gold_sql": "SELECT customer_state, ROUND(AVG(late_delivery::INTEGER) * 100, 2) AS late_pct FROM orders WHERE order_status = 'delivered' AND delivered_at IS NOT NULL AND estimated_delivery_at IS NOT NULL AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 HAVING COUNT(*) >= 100 ORDER BY late_pct DESC LIMIT 10"
+  },
+  {
+    "id": "annual_revenue",
+    "question": "比较2017年和2018年的已送达订单销售额。",
+    "gold_sql": "SELECT year(purchased_at) AS year, ROUND(SUM(item_revenue), 2) AS revenue FROM orders WHERE order_status = 'delivered' AND year(purchased_at) IN (2017, 2018) GROUP BY 1 ORDER BY 1"
+  },
+  {
+    "id": "aov_2018",
+    "question": "2018年的平均客单价是多少？",
+    "gold_sql": "SELECT ROUND(SUM(item_revenue) / COUNT(*), 2) AS aov FROM orders WHERE order_status = 'delivered' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01'"
+  },
+  {
+    "id": "shipping_days_states",
+    "question": "2018年已送达订单平均配送天数最长的前10个州是什么？每州至少100单。",
+    "gold_sql": "SELECT customer_state, ROUND(AVG(date_diff('day', purchased_at, delivered_at)), 2) AS avg_days FROM orders WHERE order_status = 'delivered' AND delivered_at IS NOT NULL AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 HAVING COUNT(*) >= 100 ORDER BY avg_days DESC LIMIT 10"
+  },
+  {
+    "id": "review_distribution",
+    "question": "已送达订单中，1到5星评价各有多少单？只列有评价的订单。",
+    "gold_sql": "SELECT review_score, COUNT(*) AS orders FROM orders WHERE order_status = 'delivered' AND review_score IS NOT NULL GROUP BY 1 ORDER BY 1"
+  },
+  {
+    "id": "late_review",
+    "question": "延期和未延期的已送达订单平均评价分数分别是多少？",
+    "gold_sql": "SELECT late_delivery, ROUND(AVG(review_score), 2) AS avg_review FROM orders WHERE order_status = 'delivered' AND late_delivery IS NOT NULL AND review_score IS NOT NULL GROUP BY 1 ORDER BY 1",
+    "match_mode": "grouped_mean"
+  },
+  {
+    "id": "repeat_customers",
+    "question": "有多少客户下过至少2笔已送达订单？",
+    "gold_sql": "SELECT COUNT(*) AS repeat_customers FROM (SELECT customer_unique_id FROM orders WHERE order_status = 'delivered' GROUP BY 1 HAVING COUNT(*) >= 2) t"
+  },
+  {
+    "id": "top_sellers",
+    "question": "销售额最高的前10个卖家是谁？",
+    "gold_sql": "SELECT seller_id, ROUND(SUM(price), 2) AS revenue FROM order_items WHERE order_status = 'delivered' GROUP BY 1 ORDER BY revenue DESC LIMIT 10"
+  },
+  {
+    "id": "top_products",
+    "question": "销量最高的前10个商品是什么？按订单行数量统计。",
+    "gold_sql": "SELECT product_id, COUNT(*) AS units FROM order_items WHERE order_status = 'delivered' GROUP BY 1 ORDER BY units DESC LIMIT 10"
+  },
+  {
+    "id": "freight_by_category",
+    "question": "运费总额最高的前10个商品类目是什么？",
+    "gold_sql": "SELECT product_category, ROUND(SUM(freight_value), 2) AS freight FROM order_items WHERE order_status = 'delivered' GROUP BY 1 ORDER BY freight DESC LIMIT 10"
+  },
+  {
+    "id": "quarterly_revenue",
+    "question": "2018年每个季度销售额是多少？",
+    "gold_sql": "SELECT quarter(purchased_at) AS quarter, ROUND(SUM(item_revenue), 2) AS revenue FROM orders WHERE order_status = 'delivered' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 ORDER BY 1"
+  },
+  {
+    "id": "cancelled_count",
+    "question": "2018年有多少笔取消的订单？",
+    "gold_sql": "SELECT COUNT(*) AS cancelled_orders FROM orders WHERE order_status = 'canceled' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01'"
+  },
+  {
+    "id": "status_distribution",
+    "question": "各订单状态分别有多少单？",
+    "gold_sql": "SELECT order_status, COUNT(*) AS orders FROM orders GROUP BY 1 ORDER BY orders DESC"
+  },
+  {
+    "id": "peak_month",
+    "question": "2018年销售额最高的月份是哪一个，金额多少？",
+    "match_mode": "max_row",
+    "gold_sql": "SELECT strftime(purchased_at, '%Y-%m') AS month, ROUND(SUM(item_revenue), 2) AS revenue FROM orders WHERE order_status = 'delivered' AND purchased_at >= '2018-01-01' AND purchased_at < '2019-01-01' GROUP BY 1 ORDER BY revenue DESC LIMIT 1"
+  },
+  {
+    "id": "items_per_order",
+    "question": "已送达订单平均包含多少件商品？",
+    "gold_sql": "SELECT ROUND(AVG(item_count), 2) AS avg_items FROM orders WHERE order_status = 'delivered'"
+  },
+  {
+    "id": "review_by_category",
+    "question": "已送达且有评价的订单行中，平均评价分数最低的前10个商品类目是什么？每类目至少100个有评价订单行。",
+    "gold_sql": "SELECT product_category, ROUND(AVG(review_score), 2) AS avg_review FROM order_items WHERE order_status = 'delivered' AND review_score IS NOT NULL GROUP BY 1 HAVING COUNT(*) >= 100 ORDER BY avg_review ASC LIMIT 10",
+    "match_mode": "grouped_mean"
+  },
+  {
+    "id": "conversion",
+    "question": "2018年网站访问到购买的转化率是多少？",
+    "unsupported": true,
+    "reason": "缺少网站访问数据"
+  },
+  {
+    "id": "ad_roi",
+    "question": "广告投放ROI是多少？",
+    "unsupported": true,
+    "reason": "缺少广告花费或归因数据"
+  },
+  {
+    "id": "gross_margin",
+    "question": "2018年毛利率是多少？",
+    "unsupported": true,
+    "reason": "缺少商品成本"
+  },
+  {
+    "id": "net_revenue",
+    "question": "扣除退款后2018年净收入是多少？",
+    "unsupported": true,
+    "reason": "缺少退款金额明细"
+  },
+  {
+    "id": "page_views",
+    "question": "哪个商品详情页访问量最高？",
+    "unsupported": true,
+    "reason": "缺少网页浏览日志"
+  },
+  {
+    "id": "promotion_uplift",
+    "question": "双11促销给销售额带来了多少增量？",
+    "unsupported": true,
+    "reason": "缺少促销标记与因果识别依据"
+  },
+  {
+    "id": "refund_rate",
+    "question": "2018年的退款率是多少？",
+    "unsupported": true,
+    "reason": "缺少退款数据"
+  },
+  {
+    "id": "inventory",
+    "question": "现在库存最低的商品是什么？",
+    "unsupported": true,
+    "reason": "缺少库存数据，且数据只到2018年"
+  },
+  {
+    "id": "ad_attribution",
+    "question": "哪个广告渠道贡献了最多订单？",
+    "unsupported": true,
+    "reason": "缺少渠道归因数据"
+  },
+  {
+    "id": "delivery_cause",
+    "question": "配送延期的根本原因是什么？",
+    "unsupported": true,
+    "reason": "只能观察延期与其他指标的关系，不能据此证明根本原因"
+  }
+]

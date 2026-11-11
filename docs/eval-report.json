@@ -1,0 +1,696 @@
+{
+  "mode": "live",
+  "cases": 30,
+  "gold_errors": 0,
+  "safety": {
+    "passed": 4,
+    "total": 4,
+    "failures": []
+  },
+  "skill_loaded": true,
+  "exact_result_accuracy": 0.933,
+  "answerable_accuracy": 0.95,
+  "unsupported_refusal_rate": 0.9,
+  "sql_success_rate": 1.0,
+  "mean_elapsed_s": 4.54,
+  "p95_elapsed_s": 6.91,
+  "total_sql_errors": 1,
+  "total_tokens": 131224,
+  "results": [
+    {
+      "id": "sales_monthly_2018",
+      "question": "2018年每个月的销售额是多少？按月份排序。",
+      "gold_rows": 8,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：2018 年已交付订单的销售额（按购买月份统计）只到 8 月，1–8 月合计约 721.8 万 BRL；3–5 月是高峰，2 月和 6 月明显回落。**\n\n查询1（口径：`order_status='delivered'` 的订单，`SUM(item_revenue)`，不含运费；按 2018 年购买月份分组）：\n\n| 月份 | 销售额 (BRL) | 已交付订单数 |\n|---|---|---|\n| 2018-01 | 924,645.00 | 7,069 |\n| 2018-02 | 826,437.13 | 6,555 |\n| 2018-03 | 953,356.25 | 7,003 |\n| 2018-04 | 973,534.09 | 6,798 |\n| 2018-05 | 977,544.69 | 6,749 |\n| 2018-06 | 856,077.86 | 6,099 |\n| 2018-07 | 867,953.46 | 6,159 |\n| 2018-08 | 838,576.64 | 6,351 |\n\n- 最高：5 月 977,544.69 BRL；最低：2 月 826,437.13 BRL。\n- 查询2 显示数据的时间范围为 2016-09-04 至 2018-10-17，2018 年 9 月及之后仅有 20 笔订单且均无已交付销售额，因此 9–12 月无法给出数字（数据不完整，不能视为真实销售为零）。\n\n注意事项：以上为历史数据集中的交付销售额，不含运费；月份按购买时间归类，非按交付时间。金额与订单量的波动属于观察性数据，不能据此推断因果原因。",
+      "queries": [
+        "SELECT STRFTIME(purchased_at, '%Y-%m') AS month, SUM(item_revenue) AS revenue, COUNT(DISTINCT order_id) AS delivered_orders FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) GROUP BY 1 ORDER BY 1 LIMIT 200",
+        "SELECT MIN(purchased_at) AS min_purchased, MAX(purchased_at) AS max_purchased, SUM(CASE WHEN purchased_at >= CAST('2018-09-01' AS TIMESTAMP) THEN 1 ELSE 0 END) AS orders_after_aug FROM orders LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 6.75,
+        "input_tokens": 5589,
+        "output_tokens": 713,
+        "total_tokens": 6302,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 6.91
+    },
+    {
+      "id": "orders_monthly_2018",
+      "question": "2018年每个月的已送达订单数是多少？",
+      "gold_rows": 8,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：2018 年已送达订单按月统计只有 1–8 月的数据，月均在 6,100–7,100 单；6–7 月最低（约 6,100 单），1 月最高（7,069 单）。**\n\n查询1（口径：`order_status='delivered'`，按**下单时间**归月，`COUNT(DISTINCT order_id)`）：\n\n| 月份 | 已送达订单数 |\n|---|---|\n| 2018-01 | 7,069 |\n| 2018-02 | 6,555 |\n| 2018-03 | 7,003 |\n| 2018-04 | 6,798 |\n| 2018-05 | 6,749 |\n| 2018-06 | 6,099 |\n| 2018-07 | 6,159 |\n| 2018-08 | 6,351 |\n\n**说明与限制：**\n- 查询2 显示已送达订单的下单时间范围为 2016-09-15 至 2018-08-29，因此 2018 年 9–12 月**无数据**，不是\"零订单\"；年末及节日季趋势无法评估。\n- 统计按**下单月**而非送达月划分；若按下单月统计，8 月订单中部分可能在该月之后才送达，且数据集在 8 月底截断，末月数值可能偏低。\n- 以上仅为历史观测结果，月度差异本身不能说明原因（如促销、季节性等）。",
+      "queries": [
+        "SELECT STRFTIME(purchased_at, '%Y-%m') AS month, COUNT(DISTINCT order_id) AS delivered_orders FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) GROUP BY 1 ORDER BY 1 LIMIT 200",
+        "SELECT MIN(purchased_at) AS min_p, MAX(purchased_at) AS max_p, COUNT(*) AS n FROM orders WHERE order_status = 'delivered' LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 5.71,
+        "input_tokens": 5402,
+        "output_tokens": 600,
+        "total_tokens": 6002,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 5.71
+    },
+    {
+      "id": "top_categories",
+      "question": "2018年销售额最高的前10个商品类目是什么？给出销售额。",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**发现：2018 年已交付订单中，`health_beauty`（健康美容）为销售额最高的商品类目，其次为 `watches_gifts`（手表与礼品）。**\n\n计费口径：按订单明细的 `SUM(price)` 计算，仅统计 `order_status='delivered'` 的订单，不含运费；时间范围为 2018-01-01 至 2018-12-31（查询1）。\n\n| 排名 | 类目 | 销售额（BRL） | 订单数 | 商品件数 |\n|---|---|---|---|---|\n| 1 | health_beauty | 755,724.50 | 5,305 | 5,841 |\n| 2 | watches_gifts | 687,855.20 | 3,418 | 3,628 |\n| 3 | bed_bath_table | 532,358.85 | 4,844 | 5,810 |\n| 4 | sports_leisure | 517,166.26 | 3,973 | 4,436 |\n| 5 | computers_accessories | 496,269.30 | 3,972 | 4,622 |\n| 6 | housewares | 391,823.46 | 3,351 | 3,969 |\n| 7 | furniture_decor | 381,649.57 | 3,147 | 4,051 |\n| 8 | auto | 343,288.30 | 2,419 | 2,580 |\n| 9 | baby | 250,615.79 | 1,627 | 1,731 |\n| 10 | cool_stuff | 227,743.70 | 1,391 | 1,447 |\n\n说明：这是历史数据（2016–2018）的描述性统计，仅含销售额排序，不含利润、退货或流量数据；类目间排名差异不代表因果效应。",
+      "queries": [
+        "SELECT product_category, SUM(price) AS revenue, COUNT(DISTINCT order_id) AS orders, SUM(1) AS items FROM order_items WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) GROUP BY product_category ORDER BY revenue DESC LIMIT 10"
+      ],
+      "usage": {
+        "elapsed_s": 4.44,
+        "input_tokens": 3762,
+        "output_tokens": 569,
+        "total_tokens": 4331,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.44
+    },
+    {
+      "id": "top_states",
+      "question": "按客户所在州汇总，2018年销售额最高的前10个州是什么？",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**核心结论：2018 年，按客户所在州统计，销售额最高的是 SP（圣保罗州），约 292 万雷亚尔，远超其他州。**\n\n2018 年已交付订单的商品销售额（`SUM(item_revenue)`，不含运费），按客户所在州汇总后排名前 10 的州见查询1：\n\n| 排名 | 州 | 销售额（BRL） | 已交付订单数 |\n|---|---|---|---|\n| 1 | SP | 2,919,328 | 23,335 |\n| 2 | RJ | 874,934 | 6,342 |\n| 3 | MG | 840,172 | 6,079 |\n| 4 | PR | 376,623 | 2,711 |\n| 5 | RS | 375,581 | 2,737 |\n| 6 | SC | 281,525 | 1,884 |\n| 7 | BA | 265,886 | 1,726 |\n| 8 | DF | 164,285 | 1,193 |\n| 9 | ES | 152,031 | 1,047 |\n| 10 | GO | 148,131 | 1,033 |\n\n说明：\n- 统计口径：2018 年 1–12 月购买、且订单状态为 delivered 的订单；指标为商品销售额，不含运费。\n- SP 的销售额约占前 10 州合计（约 640 万雷亚尔）的 46%，呈现高度地域集中；这只是分布描述，不代表因果。\n- 州名按数据集中的缩写列示；数据集没有提供州名称映射或人口、市场规模数据，所以无法解释差异原因。",
+      "queries": [
+        "SELECT customer_state, SUM(item_revenue) AS revenue, COUNT(DISTINCT order_id) AS delivered_orders FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) GROUP BY customer_state ORDER BY revenue DESC LIMIT 10"
+      ],
+      "usage": {
+        "elapsed_s": 4.71,
+        "input_tokens": 3676,
+        "output_tokens": 504,
+        "total_tokens": 4180,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.71
+    },
+    {
+      "id": "late_states",
+      "question": "2018年哪些州的配送延期率最高？只看已送达且至少100单的州，列前10。",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：2018 年配送延期率最高的州集中在巴西东北部，其中 AL（阿拉戈斯）的延期率最高，为 24.2%。**\n\n查询1 统计 2018 年已送达订单，要求 `delivered_at` 与 `estimated_delivery_at` 均非空，且每个州至少有 100 单；按配送延期率排出的前 10 个州为：\n\n| 排名 | 州 | 已送达订单数 | 延期订单数 | 延期率 |\n|---|---|---|---|---|\n| 1 | AL | 198 | 48 | 24.2% |\n| 2 | MA | 346 | 79 | 22.8% |\n| 3 | CE | 633 | 133 | 21.0% |\n| 4 | TO | 144 | 28 | 19.4% |\n| 5 | PI | 258 | 48 | 18.6% |\n| 6 | PA | 453 | 80 | 17.7% |\n| 7 | MS | 411 | 68 | 16.5% |\n| 8 | SE | 146 | 24 | 16.4% |\n| 9 | BA | 1726 | 282 | 16.3% |\n| 10 | ES | 1047 | 167 | 16.0% |\n\n说明：延期率 = 延期订单数 / 已送达订单数，只统计已送达且两个时间戳都完整的订单；因此，订单量较小的州（如 AL 198 单、TO/SE 约 145 单）的延期率波动较大，排名的稳定性相对较低。这是历史观测数据，不含未送达订单，也不构成因果解释。",
+      "queries": [
+        "SELECT customer_state, COUNT(DISTINCT order_id) AS delivered_orders, SUM(CASE WHEN late_delivery THEN 1 ELSE 0 END) AS late_orders, AVG(CAST(late_delivery AS INT)) AS late_rate FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) AND NOT delivered_at IS NULL AND NOT estimated_delivery_at IS NULL GROUP BY customer_state HAVING COUNT(DISTINCT order_id) >= 100 ORDER BY late_rate DESC LIMIT 10"
+      ],
+      "usage": {
+        "elapsed_s": 4.81,
+        "input_tokens": 3906,
+        "output_tokens": 629,
+        "total_tokens": 4535,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.81
+    },
+    {
+      "id": "annual_revenue",
+      "question": "比较2017年和2018年的已送达订单销售额。",
+      "gold_rows": 2,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：2018 年已送达订单销售额高于 2017 年，增长约 21%，主要由订单量驱动；客单价基本持平。**\n\n| 年份 | 已送达订单销售额（BRL，不含运费） | 已送达订单数 | 客单价（BRL） |\n|---|---|---|---|\n| 2017 | 5,962,902.01 | 43,428 | 137.31 |\n| 2018 | 7,218,125.12 | 52,783 | 136.75 |\n\n- 销售额增长 1,255,223.11 BRL，约 **+21.1%**；订单数增长 9,355 单，约 **+21.5%**；客单价下降 0.56 BRL，约 **−0.4%**（查询1）。\n- 口径：按 `purchased_at` 购买年份归集，仅统计 `order_status = 'delivered'` 的订单，销售额为 `item_revenue` 合计，不含运费。\n\n**注意**：2018 年数据并不完整，已送达订单最晚购买时间为 2018-08-29；而 2017 年覆盖 2017-01-05 至 12-31（查询2）。因此上表是 2018 年前 8 个月与 2017 年全年的对比，两年销售额差距被低估，并非同口径的整年比较；若需公平比较，应改为 1–8 月的同期对比。此外该数据仅为观察性历史数据，不能据此推断增长原因。",
+      "queries": [
+        "SELECT EXTRACT(YEAR FROM purchased_at) AS yr, COUNT(DISTINCT order_id) AS delivered_orders, SUM(item_revenue) AS sales_revenue, SUM(item_revenue) / COUNT(DISTINCT order_id) AS avg_order_value FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2017-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) GROUP BY 1 ORDER BY 1 LIMIT 200",
+        "SELECT EXTRACT(YEAR FROM purchased_at) AS yr, MIN(purchased_at) AS first_order, MAX(purchased_at) AS last_order FROM orders WHERE order_status = 'delivered' GROUP BY 1 ORDER BY 1 LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 4.86,
+        "input_tokens": 3901,
+        "output_tokens": 607,
+        "total_tokens": 4508,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.86
+    },
+    {
+      "id": "aov_2018",
+      "question": "2018年的平均客单价是多少？",
+      "gold_rows": 1,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：2018 年平均客单价约为 136.75 巴西雷亚尔（BRL）。**\n\n支持数据（查询1）：\n- 统计口径：平均客单价 = 已交付订单商品收入（不含运费）÷ 已交付订单数\n- 已交付订单数：52,783 单\n- 商品收入合计：7,218,125.12 BRL\n- 平均客单价：136.75 BRL\n\n说明与限制：数据中 2018 年的下单时间仅覆盖 1 月 1 日至 8 月 29 日，因此该结果代表 **2018 年 1–8 月**的平均客单价，并非完整年度；文中仅为描述性统计，不涉及因果解释。",
+      "queries": [
+        "SELECT COUNT(DISTINCT order_id) AS delivered_orders, SUM(item_revenue) AS revenue, SUM(item_revenue) / COUNT(DISTINCT order_id) AS avg_order_value, MIN(purchased_at) AS first_order, MAX(purchased_at) AS last_order FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 3.79,
+        "input_tokens": 3621,
+        "output_tokens": 372,
+        "total_tokens": 3993,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 3.79
+    },
+    {
+      "id": "shipping_days_states",
+      "question": "2018年已送达订单平均配送天数最长的前10个州是什么？每州至少100单。",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": false,
+      "answer": "**主要结果：2018 年已送达订单中，平均配送时间最长的是帕拉州（PA），约 25.47 天；该州有 453 单。**\n\n统计口径：以订单在 2018 年下单、状态为 `delivered` 且 `delivered_at` 非空为准；配送天数按 `delivered_at - purchased_at` 计算；仅纳入 2018 年已送达订单不少于 100 单的州（查询1）。\n\n| 排名 | 州 | 已送达订单数 | 平均配送天数 |\n|---:|---|---:|---:|\n| 1 | PA | 453 | 25.47 |\n| 2 | AL | 198 | 23.65 |\n| 3 | CE | 633 | 22.09 |\n| 4 | MA | 346 | 21.36 |\n| 5 | RO | 109 | 20.24 |\n| 6 | PI | 258 | 19.31 |\n| 7 | BA | 1,726 | 19.15 |\n| 8 | PB | 269 | 18.90 |\n| 9 | RN | 241 | 18.27 |\n| 10 | TO | 144 | 18.23 |\n\n注意：这里反映的是历史数据中的配送时长差异，不能据此推断配送天数与州之间存在因果关系；数据也不包含其他可能影响配送的因素。",
+      "queries": [
+        "SELECT customer_state, COUNT(DISTINCT order_id) AS delivered_orders, AVG(DATE_DIFF('SECOND', purchased_at, delivered_at) / 86400.0) AS avg_delivery_days FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01 00:00:00' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01 00:00:00' AS TIMESTAMP) AND NOT delivered_at IS NULL GROUP BY customer_state HAVING COUNT(DISTINCT order_id) >= 100 ORDER BY avg_delivery_days DESC LIMIT 10"
+      ],
+      "usage": {
+        "elapsed_s": 6.86,
+        "input_tokens": 4037,
+        "output_tokens": 855,
+        "total_tokens": 4892,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 6.86
+    },
+    {
+      "id": "review_distribution",
+      "question": "已送达订单中，1到5星评价各有多少单？只列有评价的订单。",
+      "gold_rows": 5,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：已送达订单中，有评价的订单共 96,478 单，其中 5 星最多（56,749 单），2 星最少（2,920 单）。**\n\n各评分订单数（查询1，已送达订单、仅含非空评价，历史区间 2016–2018）：\n\n| 评分 | 订单数 | 占比（有评价订单） |\n|---|---|---|\n| 1 星 | 9,353 | 9.7% |\n| 2 星 | 2,920 | 3.0% |\n| 3 星 | 7,917 | 8.2% |\n| 4 星 | 18,893 | 19.6% |\n| 5 星 | 56,749 | 58.8% |\n| 合计 | 95,832 | — |\n\n说明：查询2 显示已送达订单共 96,478 单，其中 646 单无评分（已按要求剔除），因此合计口径为 95,832 单；此处“订单”按订单去重计数，评分为 1–5 的整数分档。",
+      "queries": [
+        "SELECT review_score, COUNT(DISTINCT order_id) AS orders FROM orders WHERE order_status = 'delivered' AND NOT review_score IS NULL GROUP BY review_score ORDER BY review_score LIMIT 200",
+        "SELECT COUNT(DISTINCT order_id) AS reviewed_delivered_orders, COUNT(DISTINCT order_id) FILTER(WHERE review_score IS NULL) AS delivered_without_review FROM orders WHERE order_status = 'delivered' LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 4.53,
+        "input_tokens": 5166,
+        "output_tokens": 465,
+        "total_tokens": 5631,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.53
+    },
+    {
+      "id": "late_review",
+      "question": "延期和未延期的已送达订单平均评价分数分别是多少？",
+      "gold_rows": 2,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：延期送达的订单平均评分明显更低（约低 1.7 分）。**\n\n已送达订单按是否延期分组的平均评价分数（历史数据 2016–2018，排除 review_score 为空的记录，查询1）：\n\n| 是否延期 | 有评分订单数 | 平均评分 |\n|---|---|---|\n| 未延期 | 88,163 | 4.294 |\n| 延期 | 7,661 | 2.565 |\n\n**数据覆盖**（查询2）：已送达订单共 96,478 单，其中评分缺失 646 单、延期标记缺失 8 单，对分组平均值影响很小。\n\n**说明**：这是观察性数据中的相关关系，不能直接解读为延期导致评分下降（可能存在品类、距离、金额等混杂因素）；同时数据中没有退货、投诉原因等信息，无法进一步解释评分差异的成因。",
+      "queries": [
+        "SELECT late_delivery, COUNT(*) AS orders_with_review, ROUND(AVG(review_score), 3) AS avg_review_score FROM orders WHERE order_status = 'delivered' AND NOT review_score IS NULL AND NOT late_delivery IS NULL GROUP BY late_delivery ORDER BY late_delivery LIMIT 200",
+        "SELECT COUNT(*) AS delivered_orders, SUM(CASE WHEN review_score IS NULL THEN 1 ELSE 0 END) AS null_review, SUM(CASE WHEN late_delivery IS NULL THEN 1 ELSE 0 END) AS null_late_flag FROM orders WHERE order_status = 'delivered' LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 5.0,
+        "input_tokens": 5304,
+        "output_tokens": 471,
+        "total_tokens": 5775,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 5.0
+    },
+    {
+      "id": "repeat_customers",
+      "question": "有多少客户下过至少2笔已送达订单？",
+      "gold_rows": 1,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：历史数据（2016-09-15 至 2018-08-29）中，只有 2,801 位客户拥有至少 2 笔已送达订单。**\n\n- 有 2,801 位 `customer_unique_id` 的已送达订单数 ≥ 2（查询1）。\n- 同期共有 93,358 位客户、96,478 笔已送达订单（查询2），因此这类客户约占 3.0%。\n\n注意：这里的“重复客户”按 `customer_unique_id` 定义，同一人不同订单均计入；由于数据截止到 2018-08-29，最后一批客户的后续复购可能尚未体现（右删失），因此实际复购率可能被低估。",
+      "queries": [
+        "SELECT COUNT(*) AS repeat_customers FROM (SELECT customer_unique_id FROM orders WHERE order_status = 'delivered' GROUP BY customer_unique_id HAVING COUNT(DISTINCT order_id) >= 2) AS t LIMIT 200",
+        "SELECT COUNT(DISTINCT customer_unique_id) AS total_customers, COUNT(DISTINCT order_id) AS delivered_orders, MIN(purchased_at) AS first_purchase, MAX(purchased_at) AS last_purchase FROM orders WHERE order_status = 'delivered' LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 5.13,
+        "input_tokens": 5400,
+        "output_tokens": 458,
+        "total_tokens": 5858,
+        "tool_calls": 4,
+        "sql_attempts": 3,
+        "sql_errors": 1,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 5.13
+    },
+    {
+      "id": "top_sellers",
+      "question": "销售额最高的前10个卖家是谁？",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：销售额最高的卖家是 4869f7a5dfa277a7dca6462dcf3b52b2，交付订单商品销售额约 22.70 万 BRL。**（口径：已交付订单（delivered）的商品价格合计，不含运费，历史区间 2016–2018）\n\n| 排名 | seller_id | 销售额（BRL） | 已交付订单数 | 商品件数 | 平均评分 |\n|---|---|---|---|---|---|\n| 1 | 4869f7a5…52b2 | 226,987.93 | 1,124 | 1,148 | 4.14 |\n| 2 | 53243585…8905 | 217,940.44 | 348 | 400 | 4.13 |\n| 3 | 4a3ca931…9384 | 196,882.12 | 1,772 | 1,949 | 3.83 |\n| 4 | fa1c13f2…da94 | 190,917.14 | 578 | 579 | 4.37 |\n| 5 | 7c67e144…0ab | 186,570.05 | 973 | 1,355 | 3.35 |\n| 6 | 7e93a43e…753a | 165,981.49 | 319 | 322 | 4.36 |\n| 7 | da8622b1…b84a | 159,816.87 | 1,311 | 1,548 | 4.07 |\n| 8 | 7a67c85e…d736 | 139,658.69 | 1,145 | 1,155 | 4.27 |\n| 9 | 1025f0e2…0bfa | 138,208.56 | 910 | 1,420 | 3.86 |\n| 10 | 955fee92…ce60 | 131,836.71 | 1,261 | 1,472 | 4.09 |\n\n说明与限制：\n- 数据来源：查询1（order_items 按 seller_id 聚合，限 order_status='delivered'）。\n- 第 2 名仅用 348 单就做到第二名，客单价显著高于其他卖家；第 5 名评分最低（3.35），但其销量规模仍居前五——这些只是数据描述，不代表因果。\n- 平均评分已排除 NULL 评分；表中部分卖家销售额未包含运费，且数据为历史数据（2016–2018），不代表当前经营状况。",
+      "queries": [
+        "SELECT seller_id, ROUND(SUM(price), 2) AS revenue, COUNT(DISTINCT order_id) AS delivered_orders, COUNT(*) AS items, ROUND(AVG(review_score), 2) AS avg_review FROM order_items WHERE order_status = 'delivered' GROUP BY seller_id ORDER BY revenue DESC LIMIT 10"
+      ],
+      "usage": {
+        "elapsed_s": 4.95,
+        "input_tokens": 3935,
+        "output_tokens": 751,
+        "total_tokens": 4686,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.95
+    },
+    {
+      "id": "top_products",
+      "question": "销量最高的前10个商品是什么？按订单行数量统计。",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论**：以已交付订单（2016–2018 历史数据）的订单行数量统计，销量最高的是家具家居类（furniture_decor）商品 ID `aca2eb7d…63af`，共 520 个订单行、425 笔订单，销售额约 37,104 雷亚尔（不含运费）。\n\n**前 10 名（查询1，按订单行数量排序）**\n\n| # | 商品ID（前8位） | 品类 | 订单行数 | 订单数 | 销售额(BRL) |\n|---|---|---|---|---|---|\n| 1 | aca2eb7d | furniture_decor | 520 | 425 | 37,104.30 |\n| 2 | 422879e1 | garden_tools | 484 | 352 | 26,577.22 |\n| 3 | 99a4788c | bed_bath_table | 477 | 456 | 42,049.66 |\n| 4 | 389d119b | garden_tools | 390 | 309 | 21,336.79 |\n| 5 | 368c6c73 | garden_tools | 388 | 291 | 21,056.80 |\n| 6 | 53759a2e | garden_tools | 373 | 287 | 20,387.20 |\n| 7 | d1c42706 | computers_accessories | 332 | 313 | 45,620.56 |\n| 8 | 53b36df6 | watches_gifts | 321 | 304 | 37,454.63 |\n| 9 | 154e7e31 | health_beauty | 274 | 262 | 6,173.26 |\n| 10 | 3dd2a171 | computers_accessories | 272 | 253 | 40,782.80 |\n\n**说明与限制**\n- 口径：仅统计 `order_status = 'delivered'` 的订单行，销售额为商品价格合计、不含运费；\"销量\"在此以订单行条数计（同一商品在一笔订单中可能出现多个行）。\n- 前 10 名中有 5 个属于 garden_tools（园艺工具），但销量高不等于利润高——数据中无成本/利润字段。\n- 数据集无商品名称字段，只能以 product_id 标识；该结果是历史观测数据，不代表当前在售表现。",
+      "queries": [
+        "SELECT product_id, ANY_VALUE(product_category) AS category, COUNT(*) AS line_count, COUNT(DISTINCT order_id) AS order_count, SUM(price) AS revenue FROM order_items WHERE order_status = 'delivered' GROUP BY product_id ORDER BY line_count DESC LIMIT 10"
+      ],
+      "usage": {
+        "elapsed_s": 4.65,
+        "input_tokens": 3912,
+        "output_tokens": 668,
+        "total_tokens": 4580,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.65
+    },
+    {
+      "id": "freight_by_category",
+      "question": "运费总额最高的前10个商品类目是什么？",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论**：按已交付订单的商品行运费合计计算，运费总额最高的是 **bed_bath_table**（床品浴品），约 20.18 万 BRL；前十类目排序与第二名起基本稳定。\n\n**查询1（已交付订单，order_status = 'delivered'，order_items 逐行运费加总，2016–2018 历史数据）前十类目：**\n\n| 排名 | 类目 | 运费总额 (BRL) | 商品行数 | 订单数 |\n|---|---|---|---|---|\n| 1 | bed_bath_table | 201,774.50 | 10,953 | 9,272 |\n| 2 | health_beauty | 178,957.81 | 9,465 | 8,647 |\n| 3 | furniture_decor | 168,402.23 | 8,160 | 6,307 |\n| 4 | sports_leisure | 163,404.36 | 8,431 | 7,530 |\n| 5 | computers_accessories | 143,999.16 | 7,644 | 6,530 |\n| 6 | housewares | 142,763.56 | 6,795 | 5,743 |\n| 7 | watches_gifts | 98,156.14 | 5,859 | 5,495 |\n| 8 | garden_tools | 96,650.40 | 4,268 | 3,448 |\n| 9 | auto | 90,488.10 | 4,140 | 3,810 |\n| 10 | cool_stuff | 81,476.79 | 3,718 | 3,559 |\n\n**查询2（对照组，不限制订单状态；前十名类目与顺序与查询1 一致，金额略高）**：bed_bath_table 204,693.04、health_beauty 182,566.73、furniture_decor 172,749.30、sports_leisure 168,607.51……与查询1 差额主要来自未完成/取消订单。\n\n**说明与限制**：\n- 这里的“运费”指订单商品的 `freight_value` 加总，不包含商品销售额，也不是净利润概念；类目排名很大程度上受商品行数/订单量影响，而非单纯“单件运费高”。\n- 表中没有商品重量、体积、距离等字段，因此无法解释运费差异的原因（如大件、偏远地区等）。\n- 数据为 2016–2018 历史数据，不代表当前经营状况。",
+      "queries": [
+        "SELECT product_category, ROUND(SUM(freight_value), 2) AS total_freight, COUNT(*) AS item_lines, COUNT(DISTINCT order_id) AS orders FROM order_items WHERE order_status = 'delivered' AND NOT product_category IS NULL GROUP BY 1 ORDER BY total_freight DESC LIMIT 10",
+        "SELECT product_category, ROUND(SUM(freight_value), 2) AS total_freight, COUNT(*) AS item_lines FROM order_items WHERE NOT product_category IS NULL GROUP BY 1 ORDER BY total_freight DESC LIMIT 10"
+      ],
+      "usage": {
+        "elapsed_s": 5.49,
+        "input_tokens": 4116,
+        "output_tokens": 873,
+        "total_tokens": 4989,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 5.49
+    },
+    {
+      "id": "quarterly_revenue",
+      "question": "2018年每个季度销售额是多少？",
+      "gold_rows": 3,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**2018 年季度销售额（已送达订单，仅商品金额，不含运费；查询1）**\n\n| 季度 | 销售额（BRL） | 已送达订单数 |\n|---|---|---|\n| Q1 | 2,704,438.38 | 20,627 |\n| Q2 | 2,807,156.64 | 19,646 |\n| Q3 | 1,706,530.10 | 12,510 |\n\n- **Q2 的销售额最高，为 280.7 万 BRL**；Q1 略低，为 270.4 万 BRL；Q3 降至 170.7 万 BRL。\n- **2018 年 Q4 没有数据**：按季度统计只出现 3 个季度，查询2 也确认，2018-10-01 之后已送达订单为 0 条，因此 Q4 完全缺少数据，并非销售额为 0。\n- 缺少 Q4 数据，很可能意味着数据集在 2018 年第三季度前后结束，因此 Q3 的下降不能解释为“业务下滑”，也不代表真实的季节趋势。该数据仅为历史观测数据，不构成因果结论。",
+      "queries": [
+        "SELECT EXTRACT(QUARTER FROM purchased_at) AS quarter, ROUND(SUM(item_revenue), 2) AS sales_revenue, COUNT(DISTINCT order_id) AS delivered_orders FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) GROUP BY 1 ORDER BY 1 LIMIT 200",
+        "SELECT MAX(purchased_at) AS last_purchase, COUNT(DISTINCT order_id) AS q4_delivered_orders, ROUND(SUM(item_revenue), 2) AS q4_revenue FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-10-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 5.21,
+        "input_tokens": 5509,
+        "output_tokens": 597,
+        "total_tokens": 6106,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 5.21
+    },
+    {
+      "id": "cancelled_count",
+      "question": "2018年有多少笔取消的订单？",
+      "gold_rows": 1,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "2018年共有 **334 笔取消订单**（查询1；按 `purchased_at` 所在的年份统计，`order_status = 'canceled'`）。",
+      "queries": [
+        "SELECT COUNT(DISTINCT order_id) AS canceled_orders FROM orders WHERE order_status = 'canceled' AND purchased_at >= CAST('2018-01-01 00:00:00' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01 00:00:00' AS TIMESTAMP) LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 3.25,
+        "input_tokens": 3607,
+        "output_tokens": 326,
+        "total_tokens": 3933,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 3.25
+    },
+    {
+      "id": "status_distribution",
+      "question": "各订单状态分别有多少单？",
+      "gold_rows": 8,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**各订单状态单量（查询1，2016–2018 年历史全部订单，按订单号去重计数）**\n\n| 状态 | 订单数 |\n|---|---|\n| delivered（已送达） | 96,478 |\n| shipped（运输中） | 1,107 |\n| canceled（已取消） | 625 |\n| unavailable（不可用） | 609 |\n| invoiced（已开票） | 314 |\n| processing（处理中） | 301 |\n| created（已创建） | 5 |\n| approved（已批准） | 2 |\n\n- 已送达订单占绝大多数（约 96.9%），其余状态量级都很小。\n- 说明：这是按 `orders` 表的订单状态快照统计，并非\"已支付/已成交\"的销售口径；若看销售额应只用 delivered 订单。",
+      "queries": [
+        "SELECT order_status, COUNT(DISTINCT order_id) AS orders FROM orders GROUP BY order_status ORDER BY orders DESC LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 3.28,
+        "input_tokens": 3425,
+        "output_tokens": 277,
+        "total_tokens": 3702,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 3.28
+    },
+    {
+      "id": "peak_month",
+      "question": "2018年销售额最高的月份是哪一个，金额多少？",
+      "gold_rows": 1,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**2018年销售额最高的月份是5月，金额约 R$ 977,545（约 97.75 万雷亚尔）**（查询1）。\n\n- 口径：已交付订单（order_status='delivered'）的商品金额合计，不含运费；按购买时间归月。\n- 5月销售额约 97.75 万，交付订单 6,749 单；紧随其后的是4月（约 97.35 万，6,798 单）。两者差距很小（约 0.4%）。\n- 注意：数据中2018年仅覆盖1–8月（共8个月有交付记录），9–12月无数据，因此“最高月份”仅在这8个月内比较。",
+      "queries": [
+        "SELECT STRFTIME(DATE_TRUNC('MONTH', purchased_at), '%Y-%m') AS month, SUM(item_revenue) AS revenue, COUNT(DISTINCT order_id) AS orders FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) GROUP BY 1 ORDER BY revenue DESC LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 4.29,
+        "input_tokens": 3668,
+        "output_tokens": 315,
+        "total_tokens": 3983,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.29
+    },
+    {
+      "id": "items_per_order",
+      "question": "已送达订单平均包含多少件商品？",
+      "gold_rows": 1,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：已送达订单平均包含约 **1.14 件商品**。**\n\n- 已送达订单：96,478 笔  \n- 商品总件数：110,197 件  \n- 平均每笔已送达订单：1.142 件  \n- 时间范围：2016-09-15 至 2018-08-29  \n\n以上数据来自 **查询1**；统计只覆盖状态为“已送达”的历史订单。",
+      "queries": [
+        "SELECT COUNT(*) AS delivered_orders, COUNT(item_count) AS orders_with_item_count, SUM(item_count) AS total_items, AVG(item_count) AS avg_items_per_delivered_order, MIN(purchased_at) AS first_purchased_at, MAX(purchased_at) AS last_purchased_at FROM orders WHERE order_status = 'delivered' LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 4.25,
+        "input_tokens": 3761,
+        "output_tokens": 498,
+        "total_tokens": 4259,
+        "tool_calls": 2,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.25
+    },
+    {
+      "id": "review_by_category",
+      "question": "已送达且有评价的订单行中，平均评价分数最低的前10个商品类目是什么？每类目至少100个有评价订单行。",
+      "gold_rows": 10,
+      "status": "answered",
+      "sql_success": true,
+      "correct": true,
+      "answer": "**结论：在已送达且有评价的订单行中，平均评分最低的类目是办公家具（office_furniture，3.513 分）；前 10 名中还包括固话、男装、音频等小类目（查询1）。**\n\n统计范围：2016–2018 年 Olist 历史数据中，`order_status = 'delivered'` 且 `review_score` 非空的 109,370 个订单行，整体平均评分 4.082（查询2）。仅纳入有评价订单行 ≥100 的类目。\n\n| 排名 | 类目 | 有评价订单行 | 平均评分 |\n|---|---|---|---|\n| 1 | office_furniture | 1,654 | 3.513 |\n| 2 | fixed_telephony | 252 | 3.758 |\n| 3 | fashion_male_clothing | 124 | 3.758 |\n| 4 | audio | 358 | 3.838 |\n| 5 | home_confort | 427 | 3.852 |\n| 6 | bed_bath_table | 10,831 | 3.923 |\n| 7 | furniture_living_room | 490 | 3.935 |\n| 8 | unknown | 1,525 | 3.936 |\n| 9 | furniture_decor | 8,080 | 3.951 |\n| 10 | home_construction | 592 | 3.958 |\n\n需要注意的限制：\n- “unknown”是类目缺失/未标注，不应视为真实品类；\n- 第 2、3 名（fixed_telephony、fashion_male_clothing）样本量仅 124–252 行，估计不稳定；\n- 各列的“有评价订单行”为订单行数（同一订单可能多行），非订单数；\n- 这是历史观测数据中的相关性，且评价同时受物流时效等因素影响，不能据此断定类目本身导致低分。",
+      "queries": [
+        "SELECT product_category, COUNT(*) AS reviewed_lines, ROUND(AVG(review_score), 3) AS avg_review FROM order_items WHERE order_status = 'delivered' AND NOT review_score IS NULL AND NOT product_category IS NULL GROUP BY product_category HAVING COUNT(*) >= 100 ORDER BY avg_review ASC, reviewed_lines DESC LIMIT 10",
+        "SELECT COUNT(*) AS reviewed_lines, ROUND(AVG(review_score), 3) AS overall_avg_review FROM order_items WHERE order_status = 'delivered' AND NOT review_score IS NULL LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 6.22,
+        "input_tokens": 5653,
+        "output_tokens": 719,
+        "total_tokens": 6372,
+        "tool_calls": 3,
+        "sql_attempts": 2,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 6.22
+    },
+    {
+      "id": "conversion",
+      "question": "2018年网站访问到购买的转化率是多少？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "数据库只有订单、订单商品、评价等表，没有任何网站访问/流量/曝光数据（无 visits、sessions、impressions 字段）。因此无法计算“访问到购买”的转化率，即缺少分母（访问量）。可提供的替代指标是已下单且已送达订单数、销售额等，但这不是转化率。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 2.08,
+        "input_tokens": 2025,
+        "output_tokens": 158,
+        "total_tokens": 2183,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 2.08
+    },
+    {
+      "id": "ad_roi",
+      "question": "广告投放ROI是多少？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "数据集不含广告花费（ad spend）、曝光/访问量、转化或利润等任何营销投放数据，因此无法计算广告投放 ROI。schema 明确指出无 impressions、visits、ad spend、returns、profit；ROI 需要广告成本作为分母，数据缺失。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 2.01,
+        "input_tokens": 2029,
+        "output_tokens": 145,
+        "total_tokens": 2174,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 2.01
+    },
+    {
+      "id": "gross_margin",
+      "question": "2018年毛利率是多少？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "数据库只有售价（item_revenue/price）与运费（freight_total/freight_value），没有任何商品成本（COGS）、采购价或利润字段，因此无法计算2018年毛利率。可替代提供的指标是2018年已交付订单的销售额（不含运费）与平均订单金额。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 1.93,
+        "input_tokens": 2039,
+        "output_tokens": 177,
+        "total_tokens": 2216,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 1.93
+    },
+    {
+      "id": "net_revenue",
+      "question": "扣除退款后2018年净收入是多少？",
+      "status": "unsupported",
+      "sql_success": true,
+      "correct": true,
+      "answer": "数据集不包含退款、退货或支付流水数据（Limitations 明确说明没有 returns/net revenue 数据），因此无法计算扣除退款后的净收入。只能提供已交付订单的商品销售额（不含运费）。",
+      "queries": [
+        "SELECT COUNT(DISTINCT order_id) AS delivered_orders, SUM(item_revenue) AS gross_revenue_brl FROM orders WHERE order_status = 'delivered' AND purchased_at >= CAST('2018-01-01' AS TIMESTAMP) AND purchased_at < CAST('2019-01-01' AS TIMESTAMP) LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 4.19,
+        "input_tokens": 3628,
+        "output_tokens": 320,
+        "total_tokens": 3948,
+        "tool_calls": 3,
+        "sql_attempts": 1,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.19
+    },
+    {
+      "id": "page_views",
+      "question": "哪个商品详情页访问量最高？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "数据集中没有商品详情页访问量/浏览量（page views、visits、sessions、impressions）相关表或字段。现有表只有 orders（订单）与 order_items（订单行）及其销售、物流、评价字段，无法统计详情页访问量。可提供的替代指标是各商品的已交付订单量或商品销售额。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 2.13,
+        "input_tokens": 2031,
+        "output_tokens": 166,
+        "total_tokens": 2197,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 2.13
+    },
+    {
+      "id": "promotion_uplift",
+      "question": "双11促销给销售额带来了多少增量？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "数据集只有 2016–2018 年的订单交易记录（含订单状态、金额、时间戳、评价等），没有任何\"促销活动/折扣/曝光/流量\"标记字段，也没有对照组或基线口径，因此无法测算双11（11月11日）带来的增量销售额。要计算增量，需要：促销活动的定义与时间窗、参与促销的商品/订单标识，以及可比的基线（如无促销的同期或对照市场）。现有数据最多只能描述 11 月 11 日当天的实际已支付/已交付销售额，这属于观测值，不能等同于增量，也无法做因果归因。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 4.45,
+        "input_tokens": 2070,
+        "output_tokens": 509,
+        "total_tokens": 2579,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 4.45
+    },
+    {
+      "id": "refund_rate",
+      "question": "2018年的退款率是多少？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "该数据集（Olist 2016–2018 历史订单数据）没有退款/退货相关字段或事件记录：orders 表仅有 order_status、purchased_at、delivered_at、estimated_delivery_at、item_revenue、freight_total、item_count、review_score、late_delivery 等，order_items 表仅有订单行级的价格、运费、卖家、品类等。数据库说明中也明确标注“无 impressions、visits、广告花费、returns（退货）或利润数据”。因此无法计算 2018 年的退款率；order_status 中的 canceled / unavailable 属于订单取消或不可用状态，与退款（金额退返）并非同一概念，不能替代退款率。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 3.83,
+        "input_tokens": 2002,
+        "output_tokens": 395,
+        "total_tokens": 2397,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 3.83
+    },
+    {
+      "id": "inventory",
+      "question": "现在库存最低的商品是什么？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "数据集里没有任何库存/在库数量字段（表 orders 与 order_items 仅含订单、商品、价格、物流、评价等历史交易字段），也没有库存快照或仓库表，因此无法判断\"当前库存最低的商品\"。此外数据为 2016-2018 年历史数据，也不代表\"现在\"的状态。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 2.22,
+        "input_tokens": 2004,
+        "output_tokens": 147,
+        "total_tokens": 2151,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 2.22
+    },
+    {
+      "id": "ad_attribution",
+      "question": "哪个广告渠道贡献了最多订单？",
+      "status": "unsupported",
+      "sql_success": false,
+      "correct": true,
+      "answer": "数据库中不存在广告渠道/营销来源/UTM 等字段（orders 与 order_items 均无渠道、投放、曝光或广告花费数据），因此无法判断哪个广告渠道贡献了最多订单。",
+      "queries": [],
+      "usage": {
+        "elapsed_s": 2.23,
+        "input_tokens": 2018,
+        "output_tokens": 153,
+        "total_tokens": 2171,
+        "tool_calls": 2,
+        "sql_attempts": 0,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 2.23
+    },
+    {
+      "id": "delivery_cause",
+      "question": "配送延期的根本原因是什么？",
+      "status": "answered",
+      "sql_success": true,
+      "correct": false,
+      "answer": "**结论：数据只能指出配送延期集中在哪些环节和地区，无法确定“根本原因”**——这是历史观测数据，没有承运商、发货时间、仓库等字段，也没有任何实验或对照，因此不能做因果归因。\n\n**查询1（2016–2018年，已交付且同时有实际/预计送达时间的订单，96,470单）**\n- 延期率 8.11%（7,826单）\n- 平均实际用时 12.5天，平均承诺时效 24.4天，实际比承诺平均早 11.9天\n- 说明平台给出的承诺时效整体偏宽松，8%的延期只发生在“极端慢”的订单上\n\n**查询2（分州，订单量≥500，按延期率降序）**\n- 高延期：MA 19.67%（717单，平均运费42.95 BRL）、CE 15.32%（1,279单）、BA 14.04%（3,256单）、RJ 13.47%（12,350单）；PA 平均实际用时最长（23.7天）\n- 低延期：PR 5.00%、MG 5.61%、SP 5.89%（40,494单，平均实际8.7天）\n- 规律：延期率高的州同时具有“实际用时更长 + 平均运费更高”，这与距离远、物流成本高的方向一致，但查询结果只是相关，不能证明是运输距离造成的\n\n**查询3（含评分订单，已排除 NULL 评分）**\n- 未延期订单：平均评分 4.29，平均用时 10.8天（88,163单）\n- 延期订单：平均评分 2.57，平均用时 31.3天（7,661单）\n- 延期对体验的负面关联很强，但同样是相关而非因果\n\n**失败说明**：我原本想再做一次“承诺时效档 × 运费档”的延期率交叉分析，以进一步定位是“承诺过紧”还是“运输过慢”，但该查询未执行成功（达到了 SQL 调用次数上限），所以上述跨维度归因没有数据支撑。\n\n**缺失数据（无法回答的部分）**：数据中没有卖家发货时间/承运商/运输轨迹/仓库位置/距离/天气或运力等字段，也没有退货、利润，因此无法量化“卖家备货慢 vs 干线运输慢 vs 承诺设置不当”各自贡献多少。要定位根本原因，需要补充分环节物流时间戳和承运商维度。",
+      "queries": [
+        "SELECT COUNT(*) AS delivered_orders, SUM(CASE WHEN late_delivery THEN 1 ELSE 0 END) AS late_orders, ROUND(AVG(CAST(late_delivery AS INT)) * 100, 2) AS late_rate_pct, ROUND(AVG(DATE_DIFF('DAY', purchased_at, delivered_at)), 1) AS avg_actual_days, ROUND(AVG(DATE_DIFF('DAY', purchased_at, estimated_delivery_at)), 1) AS avg_promised_days, ROUND(AVG(DATE_DIFF('DAY', delivered_at, estimated_delivery_at)), 1) AS avg_days_vs_estimate, ROUND(AVG(review_score), 2) AS avg_review FROM orders WHERE order_status = 'delivered' AND NOT delivered_at IS NULL AND NOT estimated_delivery_at IS NULL AND NOT purchased_at IS NULL LIMIT 200",
+        "SELECT customer_state, COUNT(*) AS delivered_orders, ROUND(AVG(CAST(late_delivery AS INT)) * 100, 2) AS late_rate_pct, ROUND(AVG(DATE_DIFF('DAY', purchased_at, delivered_at)), 1) AS avg_actual_days, ROUND(AVG(DATE_DIFF('DAY', purchased_at, estimated_delivery_at)), 1) AS avg_promised_days, ROUND(AVG(freight_total), 2) AS avg_freight FROM orders WHERE order_status = 'delivered' AND NOT delivered_at IS NULL AND NOT estimated_delivery_at IS NULL AND NOT purchased_at IS NULL GROUP BY customer_state HAVING COUNT(*) >= 500 ORDER BY late_rate_pct DESC LIMIT 200",
+        "SELECT late_delivery, COUNT(*) AS orders, ROUND(AVG(review_score), 2) AS avg_review, ROUND(AVG(DATE_DIFF('DAY', purchased_at, delivered_at)), 1) AS avg_actual_days FROM orders WHERE order_status = 'delivered' AND NOT delivered_at IS NULL AND NOT estimated_delivery_at IS NULL AND NOT review_score IS NULL GROUP BY late_delivery LIMIT 200"
+      ],
+      "usage": {
+        "elapsed_s": 12.78,
+        "input_tokens": 8747,
+        "output_tokens": 1844,
+        "total_tokens": 10591,
+        "tool_calls": 5,
+        "sql_attempts": 3,
+        "sql_errors": 0,
+        "skill": "ecommerce-analysis"
+      },
+      "elapsed_s": 12.78
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.idea/
+.vscode/
+.venv/
+.env
+.env.*
+data/
+*.log
+eval/*.json
+!eval/cases.json

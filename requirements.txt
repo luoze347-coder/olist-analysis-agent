@@ -1,0 +1,10 @@
+fastapi==0.141.1
+uvicorn==0.53.0
+duckdb==1.5.5
+pandas==2.3.3
+langchain==1.4.2
+langchain-openai==1.6.6
+sqlglot==30.19.0
+plotly==7.1.0
+pytest==9.1.1
+mcp==2.2.0
